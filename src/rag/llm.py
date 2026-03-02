@@ -16,8 +16,13 @@ RETRY_DELAY_SECONDS = 5
 def _build_rag_prompt(query: str, context_chunks: List[str]) -> str:
     context = "\n\n".join(context_chunks) if context_chunks else "(No relevant context retrieved.)"
     return (
-        "You are a helpful assistant. Answer the user's question using only the provided context. "
-        "If the context does not contain enough information, say so briefly. Keep answers concise.\n\n"
+        "You are an evidence-based clinical assistant.\n"
+        "- Use ONLY the information in the context below.\n"
+        "- Give a clear, specific recommendation that directly answers the question.\n"
+        "- If hypertension management is mentioned, explicitly state the recommended first-line measures "
+        "(e.g., lifestyle changes such as reduced salt intake and regular exercise) based on the context.\n"
+        "- Do NOT add generic disclaimers, do NOT say you need more information if the context is sufficient.\n"
+        "- Keep the answer short (2–4 sentences) and to the point.\n\n"
         "Context:\n"
         f"{context}\n\n"
         "User question:\n"

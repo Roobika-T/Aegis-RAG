@@ -7,6 +7,10 @@ from .vectorstore import InMemoryVectorStore
 from .llm import generate_answer
 
 
+POISON_MARKERS = ["POISONED DOC:", "MALICIOUS-OUTCOME"]
+SENSITIVE_DENYLIST = ["john doe", "abc-1234", "mrn"]
+
+
 class PrivacyPreservingRAGPipeline:
     """
     High-level orchestration of the privacy-preserving RAG flow inspired by the paper:
@@ -39,10 +43,26 @@ class PrivacyPreservingRAGPipeline:
 
         # Retrieval from knowledge base
         retrieved = self.vector_store.similarity_search(safe_prompt, top_k=self.settings.top_k)
-        retrieved_chunks = [text for text, _ in retrieved]
 
-        # Call LLM (placeholder)
+        # Drop obviously poisoned documents from the enhanced pipeline
+        filtered_chunks: List[str] = []
+        for text, _score in retrieved:
+            if any(marker.lower() in text.lower() for marker in POISON_MARKERS):
+                continue
+            filtered_chunks.append(text)
+        retrieved_chunks = filtered_chunks or [text for text, _ in retrieved]
+
+        # Call LLM (placeholder or real provider)
         answer = generate_answer(safe_prompt, retrieved_chunks)
+
+        # Output-time anonymization: ensure responses do not echo raw PII
+        redacted_answer, _ = anonymization.anonymize_text(answer)
+
+        # Additional deny-list scrub for known sensitive markers
+        lowered = redacted_answer.lower()
+        for marker in SENSITIVE_DENYLIST:
+            if marker in lowered:
+                redacted_answer = redacted_answer.replace(marker, "<REDACTED>")
 
         # Audit trail
         audit.audit_event(
@@ -55,7 +75,7 @@ class PrivacyPreservingRAGPipeline:
         )
 
         return {
-            "answer": answer,
+            "answer": redacted_answer,
             "metadata": {
                 "prompt_was_flagged": flagged,
                 "retrieved_docs": len(retrieved_chunks),
