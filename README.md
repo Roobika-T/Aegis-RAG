@@ -40,11 +40,23 @@ The response will:
 
 - Redact and tokenize PII in the query before retrieval and generation.
 - Sanitize suspicious prompt content.
-- Retrieve relevant healthcare snippets and construct an answer via a placeholder LLM.
+- Retrieve relevant healthcare snippets and construct an answer via a real LLM (Ollama or Gemini).
 - Emit audit logs with minimal, privacy-preserving details.
+
+## LLM: Ollama (local) or Gemini
+
+- **Ollama (recommended to avoid rate limits)**  
+  Install [Ollama](https://ollama.com), run a model (e.g. `ollama run llama3.2`), then in `.env` set:
+  - `OLLAMA_BASE_URL=http://localhost:11434`
+  - `OLLAMA_MODEL=llama3.2` (or `gemma2:2b`, `mistral`, etc.)
+
+- **Gemini**  
+  Set `GEMINI_API_KEY=your_key` in `.env` (get a key at [Google AI Studio](https://aistudio.google.com/apikey)). Free tier has rate limits (429); the app retries and then returns a fallback answer.
+
+If both are set, Ollama is used first. If neither is set, responses use a placeholder.
 
 ## Notes
 
-- The LLM call is intentionally implemented as a stub; you can plug in OpenAI/Azure/local models in `src/rag/llm.py`.
+- Security primitives such as encryption, DP, and RBAC are simplified for demonstration and are **not** production-grade.
 - Security primitives such as encryption, DP, and RBAC are simplified for demonstration and are **not** production-grade.
 
