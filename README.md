@@ -55,6 +55,17 @@ The response will:
 
 If both are set, Ollama is used first. If neither is set, responses use a placeholder.
 
+## Optional: Ingest Kaggle Dataset
+
+To replace the tiny static corpus with a larger healthcare corpus from Kaggle at startup, enable the Kaggle ingestion options in `.env`:
+
+- `USE_KAGGLE_HEALTHCARE_DATASET=true`
+- `KAGGLE_HEALTHCARE_DATASET_ID=prasad22/healthcare-dataset`
+- `KAGGLE_MAX_ROWS=200` (limit docs to keep startup time reasonable)
+- `KAGGLE_TEXT_COLUMNS=` (optional comma-separated column names; leave empty to use the first 6 columns)
+
+The loader converts each tabular row into a short text document and anonymizes any detected PII patterns before embedding.
+
 ## Notes
 
 - Security primitives such as encryption, DP, and RBAC are simplified for demonstration and are **not** production-grade.

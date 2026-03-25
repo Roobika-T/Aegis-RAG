@@ -27,11 +27,66 @@ async def startup_event() -> None:
     """
     Load a tiny demo healthcare corpus that the RAG pipeline can retrieve from.
     """
+    # Either load a small static demo corpus, or ingest:
+    # 1) Kaggle dataset (optional),
+    # 2) local CSV dataset (optional),
+    # 3) fallback to the tiny static demo corpus.
     corpus = [
         "In patients with hypertension, lifestyle changes such as reduced salt intake and exercise are first-line.",
         "For diabetic patients, regular HbA1c monitoring is recommended every 3 months.",
         "Adverse drug reactions must be documented in the patient's medical record.",
     ]
+
+    if settings.use_kaggle_healthcare_dataset:
+        text_columns = (
+            [c.strip() for c in settings.kaggle_text_columns.split(",") if c.strip()]
+            if settings.kaggle_text_columns
+            else None
+        )
+        try:
+            from .data.kaggle_loader import load_healthcare_docs_from_kaggle
+
+            docs = load_healthcare_docs_from_kaggle(
+                dataset_id=settings.kaggle_healthcare_dataset_id,
+                max_rows=settings.kaggle_max_rows,
+                text_columns=text_columns,
+                anonymize=True,
+            )
+            if docs:
+                pipeline.ingest_corpus(docs)
+                return
+        except Exception as e:
+            # Fall back to static corpus if Kaggle download/parsing fails.
+            print(f"[startup] Kaggle dataset ingestion failed; falling back to static corpus. Error: {e}")
+
+    # Try local CSV ingestion if present (useful when you already downloaded the dataset).
+    if settings.use_local_healthcare_dataset:
+        try:
+            import os
+            from .data.local_csv_loader import load_healthcare_docs_from_local_csv
+
+            base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+            csv_path = settings.local_healthcare_dataset_csv_path
+            resolved_path = csv_path if os.path.isabs(csv_path) else os.path.join(base_dir, csv_path)
+
+            if os.path.exists(resolved_path):
+                text_columns = (
+                    [c.strip() for c in settings.local_text_columns.split(",") if c.strip()]
+                    if settings.local_text_columns
+                    else None
+                )
+                docs = load_healthcare_docs_from_local_csv(
+                    csv_path=resolved_path,
+                    max_rows=settings.local_max_rows,
+                    text_columns=text_columns,
+                    anonymize=True,
+                )
+                if docs:
+                    pipeline.ingest_corpus(docs)
+                    return
+        except Exception as e:
+            print(f"[startup] Local CSV ingestion failed; falling back to static corpus. Error: {e}")
+
     pipeline.ingest_corpus(corpus)
 
 
